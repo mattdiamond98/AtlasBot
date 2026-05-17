@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// One concurrent active league per guild (enforced at app layer).
+model League {
+  id                     Int       @id @default(autoincrement())
+  name                   String
+  status                 String    // REGISTRATION_OPEN | ACTIVE | COMPLETED
+  roundCount             Int
+  currentRoundNumber     Int       @default(0)
+  matchFormat            String    @default("Bo3")
+  organizerRoleId        String
+  announcementsChannelId String
+  createdByDiscordId     String
+  createdAt              DateTime  @default(now())
+
+  players LeaguePlayer[]
+  rounds  Round[]
+}
+
+model Player {
+  id            Int      @id @default(autoincrement())
+  discordUserId String   @unique
+  displayName   String
+  createdAt     DateTime @default(now())
+
+  leaguePlayers     LeaguePlayer[]
+  matchesAsA        Match[]        @relation("MatchPlayerA")
+  matchesAsB        Match[]        @relation("MatchPlayerB")
+  matchesWon        Match[]        @relation("MatchWinner")
+  matchesReported   Match[]        @relation("MatchReporter")
+}
+
+model LeaguePlayer {
+  id        Int       @id @default(autoincrement())
+  leagueId  Int
+  playerId  Int
+  status    String    // ACTIVE | DROPPED
+  seed      Int       // random tiebreak seed assigned at registration
+  joinedAt  DateTime  @default(now())
+  droppedAt DateTime?
+
+  league League @relation(fields: [leagueId], references: [id])
+  player Player @relation(fields: [playerId], references: [id])
+
+  @@unique([leagueId, playerId])
+}
+
+model Round {
+  id          Int       @id @default(autoincrement())
+  leagueId    Int
+  roundNumber Int
+  status      String    // ACTIVE | COMPLETED
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  league  League  @relation(fields: [leagueId], references: [id])
+  matches Match[]
+
+  @@unique([leagueId, roundNumber])
+}
+
+model Match {
+  id                 Int       @id @default(autoincrement())
+  roundId            Int
+  playerAId          Int
+  playerBId          Int?      // null = bye
+  winnerPlayerId     Int?
+  status             String    // SCHEDULED | REPORTED | CONFIRMED | BYE | ADMIN_RESOLVED
+  playerAGameWins    Int       @default(0)
+  playerBGameWins    Int       @default(0)
+  reportedByPlayerId Int?
+  reportedAt         DateTime?
+  confirmedAt        DateTime?
+  threadId           String?
+
+  round      Round   @relation(fields: [roundId], references: [id])
+  playerA    Player  @relation("MatchPlayerA", fields: [playerAId], references: [id])
+  playerB    Player? @relation("MatchPlayerB", fields: [playerBId], references: [id])
+  winner     Player? @relation("MatchWinner",  fields: [winnerPlayerId], references: [id])
+  reportedBy Player? @relation("MatchReporter", fields: [reportedByPlayerId], references: [id])
+}

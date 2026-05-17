@@ -1,0 +1,34 @@
+{
+  "name": "atlas-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Atlas Conquest Discord league bot — Swiss-style multi-week tournaments",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/bot.js",
+    "dev": "tsx watch src/bot.ts",
+    "register": "tsx src/discord/register-commands.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.10",
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}
