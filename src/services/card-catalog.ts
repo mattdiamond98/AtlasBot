@@ -3,7 +3,10 @@ const REPO_NAME = "atlas-conquest-website";
 const BRANCH = "main";
 const FOLDER = "CardScreenshots";
 const CONTENTS_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FOLDER}?ref=${BRANCH}`;
-const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp"];
+// CardScreenshots/ is in Git LFS, so its GitHub download_url serves a text
+// pointer file rather than the image. The folder is only used for the card
+// list; images come from the PNGs the website generates from each screenshot.
+const IMAGE_BASE_URL = "https://atlas-conquest.com/assets/card-art-png";
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
 export type CardEntry = {
@@ -15,7 +18,6 @@ export type CardEntry = {
 
 type GitHubContentItem = {
   name: string;
-  download_url: string | null;
   type: string;
 };
 
@@ -31,6 +33,11 @@ function displayNameFromFilename(filename: string): string {
   return base.replace(/-/g, " ");
 }
 
+// The site lowercases the screenshot's filename, and its URLs are case-sensitive.
+export function imageUrlForFilename(filename: string): string {
+  return `${IMAGE_BASE_URL}/${encodeURIComponent(filename.toLowerCase())}`;
+}
+
 async function fetchCatalog(): Promise<CardEntry[]> {
   const res = await fetch(CONTENTS_URL, {
     headers: { Accept: "application/vnd.github+json" },
@@ -40,18 +47,13 @@ async function fetchCatalog(): Promise<CardEntry[]> {
   }
   const items = (await res.json()) as GitHubContentItem[];
   return items
-    .filter(
-      (i) =>
-        i.type === "file" &&
-        i.download_url &&
-        IMAGE_EXTENSIONS.some((ext) => i.name.toLowerCase().endsWith(ext)),
-    )
+    .filter((i) => i.type === "file" && i.name.toLowerCase().endsWith(".png"))
     .map((i) => {
       const name = displayNameFromFilename(i.name);
       return {
         name,
         filename: i.name,
-        imageUrl: i.download_url as string,
+        imageUrl: imageUrlForFilename(i.name),
         normalized: normalize(name),
       };
     });

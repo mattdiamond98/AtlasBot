@@ -39,7 +39,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (!card) {
     const matches = await searchCards(query, 5).catch(() => []);
     if (matches.length === 1) {
-      card = matches[0];
+      card = matches[0]!;
     } else if (matches.length === 0) {
       await interaction.reply({
         content: `No card found matching "${query}".`,
@@ -60,13 +60,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   try {
     const res = await fetch(card.imageUrl);
     if (!res.ok) throw new Error(`fetch ${res.status}`);
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.startsWith("image/")) {
+      throw new Error(`unexpected content type "${contentType}"`);
+    }
     const buffer = Buffer.from(await res.arrayBuffer());
     const attachment = new AttachmentBuilder(buffer, { name: card.filename });
     await interaction.editReply({
       content: `**${card.name}**`,
       files: [attachment],
     });
-  } catch {
+  } catch (err) {
+    console.error(`/card image fetch failed for ${card.imageUrl}:`, err);
     await interaction.editReply({
       content: `**${card.name}**\n${card.imageUrl}`,
     });
